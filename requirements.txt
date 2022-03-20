@@ -1,0 +1,4 @@
+requests
+termplotlib
+beautifulsoup4
+soupsieve
