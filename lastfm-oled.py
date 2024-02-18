@@ -1,18 +1,11 @@
 #!/usr/bin/env python
 
-"""
-An analog clockface with date & time.
-
-Ported from:
-https://gist.github.com/TheRayTracer/dd12c498e3ecb9b8b47f#file-clock-py
-"""
-
 import datetime
 import json
 import math
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import bs4
 import requests
@@ -20,18 +13,11 @@ from luma.core.render import canvas
 
 from demo_opts import get_device
 
-
-def posn(angle, arm_length):
-    dx = int(math.cos(math.radians(angle)) * arm_length)
-    dy = int(math.sin(math.radians(angle)) * arm_length)
-    return (dx, dy)
-
-
 user = "kqzz"
 API_KEY = "c92cefd9ab9957cec3ffccdb70ae16c6"
 
 start = time.time()
-month_ago = round(start - 60 * 60 * 24 * 30)
+month_ago = round(start - 60 * 60 * 24 * 31)
 
 
 def get_recents_page(api_key, user, page, from_time):
@@ -58,8 +44,13 @@ def get_last_30_days():
         data = get_recents_page(API_KEY, user, i, month_ago)
         complete_scrobble_list += data["recenttracks"]["track"]
 
-    #    complete_scrobble_list = json.loads(open("scrobbles.json", "r").read())
+    # complete_scrobble_list = json.loads(open("scrobbles.json", "r").read())
     scrobbles_by_day = {}
+
+    for date in (datetime.now() - timedelta(n) for n in range(30)):
+        scrobbles_by_day[date.strftime("%d/%m/%Y")] = 0
+
+    print(scrobbles_by_day)
 
     for scrobble in reversed(complete_scrobble_list):
         if (
@@ -72,7 +63,6 @@ def get_last_30_days():
         date = scrobble_time.strftime("%d/%m/%Y")
 
         if scrobbles_by_day.get(date) is None:
-            scrobbles_by_day[date] = 1
             continue
 
         scrobbles_by_day[date] += 1
@@ -84,14 +74,12 @@ def main():
     today_last_time = "Unknown"
     while True:
         with canvas(device) as draw:
-            # draw.ellipse((left + margin, margin, right - margin, min(device.height, 64) - margin), outline="white")
-            # draw.line((cx, cy, cx + hrs[0], cy + hrs[1]), fill="white")
-            # draw.line((cx, cy, cx + mins[0], cy + mins[1]), fill="white")
-            # draw.line((cx, cy, cx + secs[0], cy + secs[1]), fill="red")
-            # draw.ellipse((cx - 2, cy - 2, cx + 2, cy + 2), fill="white", outline="white")
-            # draw.text((2 * (cx + margin), cy - 8), today_date, fill="yellow")
-            # draw.text((2 * (cx + margin), cy), today_time, fill="yellow")
             scrobbles = get_last_30_days()
+
+            if len(scrobbles) == 0:
+                time.sleep(120)
+                continue
+
             days = list(scrobbles.keys())
             counts = list(scrobbles.values())
 
@@ -117,11 +105,17 @@ def main():
                     fill="white",
                 )
             draw.text(
-                (device.width - margin_right + 3, 10), f"{max(counts)}", fill="white"
+                (device.width - margin_right + 3, 0), f"{max(counts)}", fill="white"
             )
-            draw.text((device.width - margin_right + 3, 20), f"max", fill="white")
+            draw.text((device.width - margin_right + 3, 8), f"max", fill="white")
+
             draw.text(
-                (device.width - margin_right + 3, 40),
+                (device.width - margin_right + 3, 20), f"{counts[-1]}", fill="white"
+            )
+            draw.text((device.width - margin_right + 3, 30), f"tdy", fill="white")
+
+            draw.text(
+                (device.width - margin_right + 3, 43),
                 f"{round(sum(counts) / len(counts), 1)}",
                 fill="white",
             )
